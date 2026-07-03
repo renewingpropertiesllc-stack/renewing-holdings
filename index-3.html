@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Renewing Holdings</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#1D9E75;--green-dk:#0F6E56;--green-lt:#E1F5EE;
+  --amber:#EF9F27;--amber-lt:#FAEEDA;
+  --red:#E24B4A;--red-lt:#FCEBEB;
+  --blue:#378ADD;--blue-lt:#E6F1FB;
+  --bg:#F7F6F3;--card:#fff;--border:#E0DDD5;
+  --text:#1A1916;--text2:#6B6862;--text3:#9B9892;
+  --r:10px;--r-sm:6px;
+  --shadow:0 1px 4px rgba(0,0,0,0.1);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* AUTH */
+#auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0F6E56,#1D9E75,#378ADD)}
+.auth-card{background:#fff;border-radius:16px;padding:36px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+.auth-logo{text-align:center;margin-bottom:24px}
+.auth-logo .icon{width:54px;height:54px;background:var(--green-lt);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:26px}
+.auth-logo h1{font-size:20px;font-weight:700;margin-top:8px}
+.auth-logo p{font-size:12px;color:var(--text2);margin-top:3px}
+.auth-tabs{display:flex;background:var(--bg);border-radius:var(--r-sm);padding:3px;margin-bottom:20px}
+.auth-tab{flex:1;padding:7px;text-align:center;font-size:13px;font-weight:500;border-radius:5px;cursor:pointer;color:var(--text2);border:none;background:none}
+.auth-tab.active{background:#fff;color:var(--text);box-shadow:var(--shadow)}
+.fg{margin-bottom:14px}
+.fg label{font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.fg input,.fg select{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:14px;color:var(--text);background:#fff;outline:none}
+.fg input:focus,.fg select:focus{border-color:var(--green)}
+.btn-full{width:100%;padding:11px;background:var(--green);color:#fff;border:none;border-radius:var(--r-sm);font-size:14px;font-weight:600;cursor:pointer;margin-top:6px}
+.btn-full:hover{background:var(--green-dk)}
+.auth-err{background:var(--red-lt);color:var(--red);font-size:12px;padding:9px 12px;border-radius:var(--r-sm);margin-bottom:12px;display:none}
+
+/* LAYOUT */
+#app{display:none;min-height:100vh}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:230px;min-width:230px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:100}
+.sb-brand{padding:18px 16px 14px;border-bottom:1px solid var(--border)}
+.sb-brand h2{font-size:14px;font-weight:700}
+.sb-brand p{font-size:11px;color:var(--text3);margin-top:2px}
+.sb-user{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
+.av{width:30px;height:30px;border-radius:50%;background:var(--green-lt);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--green-dk);flex-shrink:0}
+.sb-user-info{flex:1;min-width:0}
+.sb-user-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-user-role{font-size:10px;color:var(--text3)}
+.lo-btn{font-size:11px;color:var(--text3);cursor:pointer;border:none;background:none;padding:2px 5px;border-radius:4px}
+.lo-btn:hover{background:var(--bg);color:var(--red)}
+.nav-section{padding:10px 0 2px}
+.nav-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:0 16px 5px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;font-size:13px;color:var(--text2);border:none;background:none;width:100%;text-align:left;border-left:2px solid transparent}
+.nav-item:hover{background:var(--bg);color:var(--text)}
+.nav-item.active{background:var(--green-lt);color:var(--green-dk);border-left-color:var(--green);font-weight:600}
+.nav-icon{font-size:15px;width:18px;text-align:center}
+.main{margin-left:230px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar h1{font-size:16px;font-weight:700}
+.content{padding:22px;flex:1}
+.page{display:none}
+.page.active{display:block}
+
+/* CARDS */
+.card{background:var(--card);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:14px}
+.card-title{font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.metric{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.metric-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+.metric-value{font-size:26px;font-weight:700;margin:3px 0 2px}
+.metric-sub{font-size:11px;color:var(--text2)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;font-size:12px;font-weight:600;border-radius:var(--r-sm);border:1.5px solid var(--border);background:#fff;cursor:pointer;color:var(--text)}
+.btn:hover{background:var(--bg)}
+.btn-primary{background:var(--green);border-color:var(--green);color:#fff}
+.btn-primary:hover{background:var(--green-dk)}
+.btn-sm{padding:5px 9px;font-size:11px}
+.btn-danger{border-color:var(--red);color:var(--red)}
+.btn-danger:hover{background:var(--red-lt)}
+
+/* BADGES */
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px}
+.badge-green{background:var(--green-lt);color:var(--green-dk)}
+.badge-amber{background:var(--amber-lt);color:#854F0B}
+.badge-red{background:var(--red-lt);color:#A32D2D}
+.badge-blue{background:var(--blue-lt);color:#185FA5}
+.badge-gray{background:#EFEDE8;color:var(--text2)}
+
+/* FORMS */
+.field{margin-bottom:12px}
+.field label{font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+.field input,.field select,.field textarea{width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:13px;color:var(--text);background:#fff;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green)}
+.field textarea{resize:vertical;min-height:70px}
+.form-row{display:grid;gap:12px;margin-bottom:2px}
+.cols2{grid-template-columns:1fr 1fr}
+.cols3{grid-template-columns:1fr 1fr 1fr}
+
+/* CALENDAR */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cal-header h3{font-size:15px;font-weight:700}
+.cal-nav{display:flex;gap:6px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-day-label{text-align:center;font-size:11px;font-weight:700;color:var(--text3);padding:6px 0;text-transform:uppercase}
+.cal-day{min-height:70px;background:var(--bg);border-radius:var(--r-sm);padding:6px;cursor:pointer;border:1.5px solid transparent;position:relative}
+.cal-day:hover{border-color:var(--green)}
+.cal-day.today{border-color:var(--green);background:var(--green-lt)}
+.cal-day.selected{border-color:var(--green);background:var(--green-lt);box-shadow:0 0 0 2px var(--green)}
+.cal-day.other-month{opacity:.4}
+.cal-day-num{font-size:12px;font-weight:600;color:var(--text2)}
+.cal-day.today .cal-day-num{color:var(--green-dk);font-weight:700}
+.cal-event{font-size:10px;background:var(--green);color:#fff;border-radius:3px;padding:2px 4px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-event.amber{background:var(--amber)}
+.cal-event.red{background:var(--red)}
+.cal-event.blue{background:var(--blue)}
+
+/* DAY PANEL */
+.day-panel{background:var(--card);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.day-panel-title{font-size:14px;font-weight:700;margin-bottom:14px;color:var(--green-dk)}
+.task-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--bg)}
+.task-row:last-child{border-bottom:none}
+.task-dot{width:10px;height:10px;border-radius:50%;background:var(--green);flex-shrink:0;margin-top:4px}
+.task-dot.amber{background:var(--amber)}
+.task-dot.red{background:var(--red)}
+.task-dot.blue{background:var(--blue)}
+.task-info{flex:1}
+.task-title-text{font-size:13px;font-weight:600;color:var(--text)}
+.task-meta{font-size:11px;color:var(--text2);margin-top:2px}
+.task-time-badge{font-size:10px;color:var(--text3);white-space:nowrap;font-weight:600}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:1000}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:var(--r);padding:24px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:18px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+
+/* PROPERTIES */
+.prop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-top:12px}
+.prop-card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r);padding:14px;cursor:pointer;transition:all .15s}
+.prop-card:hover{border-color:var(--green);box-shadow:0 0 0 3px var(--green-lt)}
+.prop-addr{font-size:13px;font-weight:700}
+.prop-unit{font-size:11px;color:var(--text2);margin-top:2px}
+.prop-status{margin-top:8px}
+
+/* SOW */
+.sow-section{margin-bottom:18px}
+.sow-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.sow-item{display:grid;grid-template-columns:24px 1fr auto;gap:10px;align-items:start;padding:8px;border-radius:var(--r-sm);margin-bottom:4px;background:var(--bg)}
+.sow-check{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.sow-check.done{background:var(--green);border-color:var(--green)}
+.sow-check.done::after{content:'✓';color:#fff;font-size:11px;font-weight:700}
+.sow-item-body{flex:1}
+.sow-task{font-size:13px;font-weight:600;color:var(--text)}
+.sow-task.done{text-decoration:line-through;color:var(--text3)}
+.sow-detail-text{font-size:11px;color:var(--text2);margin-top:2px}
+.sow-assign{font-size:11px;background:var(--blue-lt);color:#185FA5;padding:2px 7px;border-radius:10px;font-weight:600;white-space:nowrap}
+.cost-only{font-size:11px;color:var(--green-dk);font-weight:600;margin-top:4px}
+
+/* VOICE */
+.voice-btn{width:60px;height:60px;border-radius:50%;background:var(--green);border:none;color:#fff;font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(29,158,117,.4);transition:all .2s}
+.voice-btn:hover{background:var(--green-dk);transform:scale(1.05)}
+.voice-btn.recording{background:var(--red);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(226,75,74,.4)}50%{box-shadow:0 0 0 12px rgba(226,75,74,0)}}
+.voice-transcript{background:var(--bg);border-radius:var(--r-sm);padding:12px;font-size:13px;color:var(--text2);min-height:60px;margin:12px 0;border:1px solid var(--border);font-style:italic}
+
+/* TEAM */
+.team-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--bg)}
+.team-row:last-child{border-bottom:none}
+.team-av{width:34px;height:34px;border-radius:50%;background:var(--blue-lt);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#185FA5;flex-shrink:0}
+.team-info{flex:1}
+.team-name{font-size:13px;font-weight:600}
+.team-task{font-size:11px;color:var(--text2);margin-top:2px}
+
+.back-btn{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--text2);cursor:pointer;border:none;background:none;padding:0;margin-bottom:14px;font-weight:500}
+.back-btn:hover{color:var(--green)}
+
+.loading{display:flex;align-items:center;justify-content:center;padding:30px;color:var(--text3);font-size:13px;gap:8px}
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:30px;color:var(--text3);font-size:13px}
+
+.toast{position:fixed;bottom:22px;right:22px;background:var(--text);color:#fff;padding:11px 16px;border-radius:var(--r-sm);font-size:13px;font-weight:500;z-index:2000;transform:translateY(80px);opacity:0;transition:all .3s}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{background:var(--green-dk)}
+.toast.error{background:var(--red)}
+
+.divider{height:1px;background:var(--border);margin:14px 0}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="icon">🏠</div>
+      <h1>Renewing Holdings</h1>
+      <p>Property management platform</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Sign in</button>
+      <button class="auth-tab" onclick="switchTab('signup')">Create account</button>
+    </div>
+    <div class="auth-err" id="auth-err"></div>
+    <div id="login-form">
+      <div class="fg"><label>Email</label><input type="email" id="li-email" placeholder="your@email.com"></div>
+      <div class="fg"><label>Password</label><input type="password" id="li-pw" placeholder="••••••••"></div>
+      <button class="btn-full" onclick="signIn()">Sign in</button>
+    </div>
+    <div id="signup-form" style="display:none">
+      <div class="fg"><label>Full name</label><input type="text" id="su-name" placeholder="Your full name"></div>
+      <div class="fg"><label>Email</label><input type="email" id="su-email" placeholder="your@email.com"></div>
+      <div class="fg"><label>Password</label><input type="password" id="su-pw" placeholder="Min 6 characters"></div>
+      <div class="fg"><label>Role</label>
+        <select id="su-role">
+          <option value="owner">Owner</option>
+          <option value="employee">Employee</option>
+          <option value="contractor">Contractor (view only)</option>
+        </select>
+      </div>
+      <button class="btn-full" onclick="signUp()">Create account</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sb-brand">
+        <h2>🏠 Renewing Holdings</h2>
+        <p>Property management</p>
+      </div>
+      <div class="sb-user">
+        <div class="av" id="nav-av">RH</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="nav-name">Loading...</div>
+          <div class="sb-user-role" id="nav-role">—</div>
+        </div>
+        <button class="lo-btn" onclick="signOut()">Out</button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Overview</div>
+        <button class="nav-item active" onclick="showPage('dashboard',this)"><span class="nav-icon">📊</span>Dashboard</button>
+        <button class="nav-item" onclick="showPage('calendar',this)"><span class="nav-icon">📅</span>Calendar</button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Companies</div>
+        <button class="nav-item" onclick="showPage('gm',this)"><span class="nav-icon">🏢</span>Greenmeadow Props</button>
+        <button class="nav-item" onclick="showPage('g44',this)"><span class="nav-icon">🏢</span>9544 Greenmeadow</button>
+        <button class="nav-item" onclick="showPage('rh',this)"><span class="nav-icon">🔨</span>Renewing Homes</button>
+      </div>
+      <div class="nav-section" id="owner-nav">
+        <div class="nav-label">Management</div>
+        <button class="nav-item" onclick="showPage('team',this)"><span class="nav-icon">👥</span>Team & Tasks</button>
+        <button class="nav-item" onclick="showPage('share',this)"><span class="nav-icon">🔗</span>Share & Access</button>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="topbar">
+        <h1 id="page-title">Dashboard</h1>
+        <span style="font-size:12px;color:var(--text2)" id="topbar-date"></span>
+      </div>
+      <div class="content">
+
+        <!-- DASHBOARD -->
+        <div class="page active" id="page-dashboard">
+          <div class="metrics">
+            <div class="metric"><div class="metric-label">Total units</div><div class="metric-value">17</div><div class="metric-sub">3 companies</div></div>
+            <div class="metric"><div class="metric-label">Active flips</div><div class="metric-value">3</div><div class="metric-sub">Renewing Homes</div></div>
+            <div class="metric"><div class="metric-label">Today's tasks</div><div class="metric-value" id="dash-count">—</div><div class="metric-sub">On calendar</div></div>
+            <div class="metric"><div class="metric-label">Team</div><div class="metric-value" id="dash-team">—</div><div class="metric-sub">Active members</div></div>
+          </div>
+          <div class="grid2">
+            <div class="card">
+              <div class="card-title">Today's tasks <button class="btn btn-sm" onclick="showPage('calendar',document.querySelectorAll('.nav-item')[1])">View calendar</button></div>
+              <div id="dash-tasks"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Portfolio</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border-radius:var(--r-sm);cursor:pointer" onclick="showPage('gm',document.querySelectorAll('.nav-item')[2])">
+                  <span style="font-size:18px">🏢</span>
+                  <div><div style="font-size:13px;font-weight:700">Greenmeadow Properties LLC</div><div style="font-size:11px;color:var(--text2)">8 townhouses · Windham, OH</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border-radius:var(--r-sm);cursor:pointer" onclick="showPage('g44',document.querySelectorAll('.nav-item')[3])">
+                  <span style="font-size:18px">🏢</span>
+                  <div><div style="font-size:13px;font-weight:700">9544 Greenmeadow LLC</div><div style="font-size:11px;color:var(--text2)">6 townhouses · Windham, OH</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border-radius:var(--r-sm);cursor:pointer" onclick="showPage('rh',document.querySelectorAll('.nav-item')[4])">
+                  <span style="font-size:18px">🔨</span>
+                  <div><div style="font-size:13px;font-weight:700">Renewing Homes LLC</div><div style="font-size:11px;color:var(--text2)">3 flip properties · NE Ohio</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CALENDAR -->
+        <div class="page" id="page-calendar">
+          <div class="grid2">
+            <div class="card" style="margin-bottom:0">
+              <div class="cal-header">
+                <h3 id="cal-month-label"></h3>
+                <div class="cal-nav">
+                  <button class="btn btn-sm" onclick="changeMonth(-1)">‹ Prev</button>
+                  <button class="btn btn-sm" onclick="changeMonth(1)">Next ›</button>
+                </div>
+              </div>
+              <div class="cal-grid" id="cal-grid">
+                <div class="cal-day-label">Sun</div>
+                <div class="cal-day-label">Mon</div>
+                <div class="cal-day-label">Tue</div>
+                <div class="cal-day-label">Wed</div>
+                <div class="cal-day-label">Thu</div>
+                <div class="cal-day-label">Fri</div>
+                <div class="cal-day-label">Sat</div>
+              </div>
+            </div>
+            <div>
+              <div class="day-panel" id="day-panel">
+                <div class="day-panel-title" id="day-panel-title">Select a day</div>
+                <div id="day-tasks"><div class="empty">Click a day on the calendar to view or add tasks</div></div>
+                <div id="add-task-btn-wrap" style="margin-top:12px;display:none">
+                  <button class="btn btn-primary" style="width:100%" onclick="openAddTask()">+ Add task to this day</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GREENMEADOW PROPERTIES -->
+        <div class="page" id="page-gm">
+          <div id="gm-list">
+            <div class="card" style="margin-bottom:0">
+              <div style="font-size:15px;font-weight:700">Greenmeadow Properties LLC</div>
+              <div style="font-size:12px;color:var(--text2);margin-top:2px">8 townhouses · 9550, 9556, 9562 Greenmeadow Rd · Windham, OH</div>
+            </div>
+            <div class="prop-grid" id="gm-grid"></div>
+          </div>
+          <div id="gm-sow" style="display:none">
+            <button class="back-btn" onclick="showList('gm')">← Back to units</button>
+            <div id="gm-sow-content"></div>
+          </div>
+        </div>
+
+        <!-- 9544 GREENMEADOW -->
+        <div class="page" id="page-g44">
+          <div id="g44-list">
+            <div class="card" style="margin-bottom:0">
+              <div style="font-size:15px;font-weight:700">9544 Greenmeadow LLC</div>
+              <div style="font-size:12px;color:var(--text2);margin-top:2px">6 townhouses · 9544 Greenmeadow Rd A–F · Windham, OH</div>
+            </div>
+            <div class="prop-grid" id="g44-grid"></div>
+          </div>
+          <div id="g44-sow" style="display:none">
+            <button class="back-btn" onclick="showList('g44')">← Back to units</button>
+            <div id="g44-sow-content"></div>
+          </div>
+        </div>
+
+        <!-- RENEWING HOMES -->
+        <div class="page" id="page-rh">
+          <div id="rh-list">
+            <div class="card" style="margin-bottom:0">
+              <div style="font-size:15px;font-weight:700">Renewing Homes LLC</div>
+              <div style="font-size:12px;color:var(--text2);margin-top:2px">3 flip properties · North Olmsted & Aurora, OH</div>
+            </div>
+            <div class="prop-grid" id="rh-grid"></div>
+          </div>
+          <div id="rh-sow" style="display:none">
+            <button class="back-btn" onclick="showList('rh')">← Back to properties</button>
+            <div id="rh-sow-content"></div>
+          </div>
+        </div>
+
+        <!-- TEAM -->
+        <div class="page" id="page-team">
+          <div class="card" id="team-form">
+            <div class="card-title">Add team member</div>
+            <div class="form-row cols3">
+              <div class="field"><label>Full name</label><input type="text" id="t-name" placeholder="Name"></div>
+              <div class="field"><label>Role</label><select id="t-role"><option>Employee</option><option>Contractor</option><option>Supervisor</option></select></div>
+              <div class="field"><label>Trade</label><input type="text" id="t-trade" placeholder="e.g. Electrician"></div>
+            </div>
+            <div class="form-row cols2">
+              <div class="field"><label>Phone</label><input type="tel" id="t-phone" placeholder="(330) 555-0000"></div>
+              <div class="field"><label>Today's assignment</label><input type="text" id="t-tasks" placeholder="e.g. Paint 9556 Unit A"></div>
+            </div>
+            <button class="btn btn-primary" onclick="addTeam()">+ Add person</button>
+          </div>
+          <div class="card">
+            <div class="card-title">Team today</div>
+            <div id="team-list"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+          </div>
+        </div>
+
+        <!-- SHARE -->
+        <div class="page" id="page-share">
+          <div class="card">
+            <div class="card-title">📺 Office TV display</div>
+            <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Open this app in any browser on a device connected to your TV. Go to the Calendar page and press F11 for fullscreen — it updates live.</p>
+            <div style="background:var(--bg);border-radius:var(--r-sm);padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <span style="font-size:12px;color:var(--text2);font-family:monospace;word-break:break-all" id="app-url"></span>
+              <button class="btn btn-sm" onclick="copyUrl()">Copy</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">🔗 Share with contractors</div>
+            <p style="font-size:13px;color:var(--text2);margin-bottom:10px">Send this link to contractors. They sign up, choose "Contractor" role — they can view SOWs but cannot edit anything or see costs.</p>
+            <div style="background:var(--green-lt);border-radius:var(--r-sm);padding:11px 14px;font-size:13px;color:var(--green-dk)">✓ Contractors see task descriptions and their assignments only. Costs are hidden from everyone except you.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">👷 Add employees</div>
+            <p style="font-size:13px;color:var(--text2)">Employees sign up with the same link and choose "Employee" role. They can view and update task status but cannot see costs or delete anything.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD TASK MODAL -->
+<div class="modal-overlay" id="task-modal">
+  <div class="modal">
+    <div class="modal-title">Add task to <span id="modal-date-label"></span></div>
+    <div class="field"><label>Task type</label>
+      <select id="m-type">
+        <option>Site visit</option>
+        <option>Tenant issue</option>
+        <option>Payment due</option>
+        <option>Contractor meeting</option>
+        <option>Inspection</option>
+        <option>Employee task</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="field"><label>Property</label>
+      <input type="text" id="m-prop" placeholder="Type or select..." list="prop-opts">
+      <datalist id="prop-opts">
+        <option value="9550 Greenmeadow A"></option><option value="9550 Greenmeadow B"></option>
+        <option value="9556 Greenmeadow A"></option><option value="9556 Greenmeadow B"></option>
+        <option value="9556 Greenmeadow C"></option><option value="9556 Greenmeadow D"></option>
+        <option value="9562 Greenmeadow A"></option><option value="9562 Greenmeadow B"></option>
+        <option value="9544 Greenmeadow A"></option><option value="9544 Greenmeadow B"></option>
+        <option value="9544 Greenmeadow C"></option><option value="9544 Greenmeadow D"></option>
+        <option value="9544 Greenmeadow E"></option><option value="9544 Greenmeadow F"></option>
+        <option value="2771 W230th, N. Olmsted"></option>
+        <option value="1263 Nicola, Aurora"></option>
+        <option value="750 Parker Rd, Aurora"></option>
+        <option value="General / Office"></option>
+      </datalist>
+    </div>
+    <div class="form-row cols2">
+      <div class="field"><label>Time</label><input type="time" id="m-time" value="09:00"></div>
+      <div class="field"><label>Assigned to</label><input type="text" id="m-assign" placeholder="Name"></div>
+    </div>
+    <div class="field"><label>Description</label><textarea id="m-desc" placeholder="What needs to be done?"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('task-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTask()">Save task</button>
+    </div>
+  </div>
+</div>
+
+<!-- WALKTHROUGH MODAL -->
+<div class="modal-overlay" id="walk-modal">
+  <div class="modal">
+    <div class="modal-title" id="walk-title">Walkthrough</div>
+    <div id="walk-rooms" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px"></div>
+    <div id="walk-current-room" style="font-size:13px;font-weight:600;color:var(--green-dk);margin-bottom:8px"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+      <button class="voice-btn" id="voice-btn" onclick="toggleVoice()">🎤</button>
+      <div style="flex:1">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:4px" id="voice-status">Tap mic to record notes for this room</div>
+        <div class="voice-transcript" id="voice-transcript">Your spoken notes will appear here...</div>
+      </div>
+    </div>
+    <div class="field"><label>📷 Photo notes</label><input type="file" id="walk-photo" accept="image/*" capture="environment" style="font-size:13px"></div>
+    <div class="field"><label>Additional notes</label><textarea id="walk-notes" placeholder="Any extra details for this room..."></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn" onclick="prevRoom()" id="prev-room-btn">← Prev room</button>
+      <button class="btn btn-primary" style="flex:1" onclick="nextRoom()" id="next-room-btn">Next room →</button>
+    </div>
+    <div class="divider"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="generateSOW()" id="gen-sow-btn">✨ Generate SOW from walkthrough</button>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('walk-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- SOW ADD ITEM MODAL -->
+<div class="modal-overlay" id="sow-modal">
+  <div class="modal">
+    <div class="modal-title">Add task to SOW</div>
+    <div class="field"><label>Room / Area</label>
+      <input type="text" id="sm-room" placeholder="e.g. Kitchen, Bathroom, Exterior" list="room-opts">
+      <datalist id="room-opts">
+        <option value="Kitchen"></option><option value="Living Room"></option>
+        <option value="Master Bedroom"></option><option value="Bedroom 2"></option>
+        <option value="Bathroom 1"></option><option value="Bathroom 2"></option>
+        <option value="Basement"></option><option value="Exterior"></option>
+        <option value="Electrical"></option><option value="Plumbing"></option>
+        <option value="HVAC"></option><option value="Roofing"></option>
+        <option value="General"></option>
+      </datalist>
+    </div>
+    <div class="field"><label>Task description</label><textarea id="sm-task" placeholder="Describe what needs to be done..."></textarea></div>
+    <div class="form-row cols2">
+      <div class="field"><label>Assign to</label>
+        <input type="text" id="sm-assign" placeholder="Mark, Kevin, or contractor" list="team-opts">
+        <datalist id="team-opts"><option value="Mark"></option><option value="Kevin"></option><option value="Hire out"></option></datalist>
+      </div>
+      <div class="field"><label>Status</label>
+        <select id="sm-status">
+          <option value="not_started">Not started</option>
+          <option value="in_progress">In progress</option>
+          <option value="done">Done</option>
+        </select>
+      </div>
+    </div>
+    <div class="field owner-only" id="cost-field"><label>💰 Estimated cost (only you see this)</label><input type="text" id="sm-cost" placeholder="$0"></div>
+    <input type="hidden" id="sm-unit-id">
+    <input type="hidden" id="sm-item-id">
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('sow-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSOWItem()">Save task</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SURL='https://hsfuhiytasnvvmfbyorw.supabase.co';
+const SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzZnVoaXl0YXNudnZtZmJ5b3J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3MTA2OTUsImV4cCI6MjA5NzI4NjY5NX0.seRyxS0nW1hlOHUqwZWIPgTmiJzLR61eQ9yKc41qzgg';
+const {createClient}=supabase;
+const db=createClient(SURL,SKEY);
+
+let USER=null,ROLE='contractor';
+let calYear,calMonth,selectedDate=null,allEvents={};
+let walkUnit=null,walkRooms=[],walkIdx=0,walkData={};
+let recognition=null,isRecording=false;
+let currentSOWUnit=null;
+
+const GM=[
+  {id:'gm-9550-a',addr:'9550 Greenmeadow Rd',unit:'Unit A',co:'Greenmeadow Properties LLC'},
+  {id:'gm-9550-b',addr:'9550 Greenmeadow Rd',unit:'Unit B',co:'Greenmeadow Properties LLC'},
+  {id:'gm-9556-a',addr:'9556 Greenmeadow Rd',unit:'Unit A',co:'Greenmeadow Properties LLC'},
+  {id:'gm-9556-b',addr:'9556 Greenmeadow Rd',unit:'Unit B',co:'Greenmeadow Properties LLC'},
+  {id:'gm-9556-c',addr:'9556 Greenmeadow Rd',unit:'Unit C',co:'Greenmeadow Properties LLC'},
+  {id:'gm-9556-d',addr:'9556 Greenmeadow Rd',unit:'Unit D',co:'Greenmeadow Properties LLC'},
+  {id:'gm-9562-a',addr:'9562 Greenmeadow Rd',unit:'Unit A',co:'Greenmeadow Properties LLC'},
+  {id:'gm-9562-b',addr:'9562 Greenmeadow Rd',unit:'Unit B',co:'Greenmeadow Properties LLC'},
+];
+const G44=[
+  {id:'g44-a',addr:'9544 Greenmeadow Rd',unit:'Unit A',co:'9544 Greenmeadow LLC'},
+  {id:'g44-b',addr:'9544 Greenmeadow Rd',unit:'Unit B',co:'9544 Greenmeadow LLC'},
+  {id:'g44-c',addr:'9544 Greenmeadow Rd',unit:'Unit C',co:'9544 Greenmeadow LLC'},
+  {id:'g44-d',addr:'9544 Greenmeadow Rd',unit:'Unit D',co:'9544 Greenmeadow LLC'},
+  {id:'g44-e',addr:'9544 Greenmeadow Rd',unit:'Unit E',co:'9544 Greenmeadow LLC'},
+  {id:'g44-f',addr:'9544 Greenmeadow Rd',unit:'Unit F',co:'9544 Greenmeadow LLC'},
+];
+const RH=[
+  {id:'rh-w230',addr:'2771 W 230th St',unit:'North Olmsted, OH',co:'Renewing Homes LLC',flip:true},
+  {id:'rh-nicola',addr:'1263 Nicola St',unit:'Aurora, OH 44202',co:'Renewing Homes LLC',flip:true},
+  {id:'rh-parker',addr:'750 Parker Rd',unit:'Aurora, OH 44202',co:'Renewing Homes LLC',flip:true},
+];
+const ROOMS=['Kitchen','Living Room','Master Bedroom','Bedroom 2','Bathroom 1','Bathroom 2','Basement','Exterior'];
+
+// INIT
+document.addEventListener('DOMContentLoaded',async()=>{
+  const now=new Date();
+  calYear=now.getFullYear();calMonth=now.getMonth();
+  document.getElementById('topbar-date').textContent=now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  document.getElementById('app-url').textContent=window.location.href;
+  const {data:{session}}=await db.auth.getSession();
+  if(session)await loadUser(session.user);
+  db.auth.onAuthStateChange(async(_,s)=>{if(s)await loadUser(s.user);else showAuth();});
+});
+
+async function loadUser(user){
+  USER=user;
+  const {data}=await db.from('profiles').select('*').eq('id',user.id).single();
+  ROLE=data?.role||'contractor';
+  const name=data?.name||user.email;
+  document.getElementById('nav-name').textContent=name;
+  document.getElementById('nav-role').textContent=ROLE.charAt(0).toUpperCase()+ROLE.slice(1);
+  document.getElementById('nav-av').textContent=name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  if(ROLE==='contractor'){
+    document.getElementById('owner-nav').style.display='none';
+    document.getElementById('cost-field').style.display='none';
+  }
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  buildGrids();
+  renderCalendar();
+  loadDashTasks();
+  loadTeam();
+}
+function showAuth(){
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+}
+
+// AUTH
+function switchTab(t){
+  document.querySelectorAll('.auth-tab').forEach((el,i)=>el.classList.toggle('active',(i===0&&t==='login')||(i===1&&t==='signup')));
+  document.getElementById('login-form').style.display=t==='login'?'block':'none';
+  document.getElementById('signup-form').style.display=t==='signup'?'block':'none';
+  document.getElementById('auth-err').style.display='none';
+}
+async function signIn(){
+  const email=document.getElementById('li-email').value;
+  const pw=document.getElementById('li-pw').value;
+  const {error}=await db.auth.signInWithPassword({email,password:pw});
+  if(error)showErr(error.message);
+}
+async function signUp(){
+  const name=document.getElementById('su-name').value;
+  const email=document.getElementById('su-email').value;
+  const pw=document.getElementById('su-pw').value;
+  const role=document.getElementById('su-role').value;
+  if(!name||!email||!pw)return showErr('Please fill in all fields');
+  const {data,error}=await db.auth.signUp({email,password:pw});
+  if(error)return showErr(error.message);
+  if(data.user){
+    await db.from('profiles').upsert({id:data.user.id,name,role,email});
+    toast('Account created! Welcome.','success');
+  }
+}
+async function signOut(){await db.auth.signOut();showAuth();}
+function showErr(m){const e=document.getElementById('auth-err');e.textContent=m;e.style.display='block';}
+
+// NAV
+const TITLES={dashboard:'Dashboard',calendar:'Calendar',gm:'Greenmeadow Properties LLC',g44:'9544 Greenmeadow LLC',rh:'Renewing Homes LLC',team:'Team & Tasks',share:'Share & Access'};
+function showPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(btn)btn.classList.add('active');
+  document.getElementById('page-title').textContent=TITLES[id]||id;
+  if(id==='calendar')renderCalendar();
+}
+
+// CALENDAR
+function renderCalendar(){
+  const label=new Date(calYear,calMonth).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  document.getElementById('cal-month-label').textContent=label;
+  const grid=document.getElementById('cal-grid');
+  // Remove old day cells (keep 7 header labels)
+  while(grid.children.length>7)grid.removeChild(grid.lastChild);
+  const first=new Date(calYear,calMonth,1).getDay();
+  const days=new Date(calYear,calMonth+1,0).getDate();
+  const prevDays=new Date(calYear,calMonth,0).getDate();
+  const today=new Date();
+  // prev month padding
+  for(let i=0;i<first;i++){
+    const d=document.createElement('div');
+    d.className='cal-day other-month';
+    d.innerHTML=`<div class="cal-day-num">${prevDays-first+1+i}</div>`;
+    grid.appendChild(d);
+  }
+  for(let d=1;d<=days;d++){
+    const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const div=document.createElement('div');
+    div.className='cal-day';
+    const isToday=d===today.getDate()&&calMonth===today.getMonth()&&calYear===today.getFullYear();
+    if(isToday)div.classList.add('today');
+    if(selectedDate===dateStr)div.classList.add('selected');
+    div.innerHTML=`<div class="cal-day-num">${d}</div>`;
+    // Show events
+    if(allEvents[dateStr]){
+      allEvents[dateStr].slice(0,2).forEach(ev=>{
+        const colorMap={'Tenant issue':'amber','Payment due':'red','Contractor meeting':'blue','Inspection':'blue'};
+        const cls=colorMap[ev.type]||'';
+        const span=document.createElement('div');
+        span.className=`cal-event ${cls}`;
+        span.textContent=ev.type;
+        div.appendChild(span);
+      });
+      if(allEvents[dateStr].length>2){
+        const more=document.createElement('div');
+        more.style.cssText='font-size:10px;color:var(--text3);margin-top:2px';
+        more.textContent=`+${allEvents[dateStr].length-2} more`;
+        div.appendChild(more);
+      }
+    }
+    div.onclick=()=>selectDay(dateStr,d);
+    grid.appendChild(div);
+  }
+  // Load events for this month
+  loadMonthEvents();
+}
+function changeMonth(dir){
+  calMonth+=dir;
+  if(calMonth>11){calMonth=0;calYear++;}
+  if(calMonth<0){calMonth=11;calYear--;}
+  renderCalendar();
+}
+async function loadMonthEvents(){
+  const start=`${calYear}-${String(calMonth+1).padStart(2,'0')}-01`;
+  const end=`${calYear}-${String(calMonth+1).padStart(2,'0')}-31`;
+  const {data}=await db.from('schedule').select('*').gte('date',start).lte('date',end);
+  allEvents={};
+  if(data)data.forEach(e=>{if(!allEvents[e.date])allEvents[e.date]=[];allEvents[e.date].push(e);});
+  renderCalendar();
+  // update dash count
+  const today=new Date().toISOString().split('T')[0];
+  const todayEvs=allEvents[today]||[];
+  document.getElementById('dash-count').textContent=todayEvs.length;
+}
+function selectDay(dateStr,d){
+  selectedDate=dateStr;
+  renderCalendar();
+  const nice=new Date(calYear,calMonth,d).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  document.getElementById('day-panel-title').textContent=nice;
+  const wrap=document.getElementById('add-task-btn-wrap');
+  if(ROLE==='owner'||ROLE==='employee')wrap.style.display='block';
+  renderDayTasks(dateStr);
+}
+function renderDayTasks(dateStr){
+  const el=document.getElementById('day-tasks');
+  const evs=allEvents[dateStr]||[];
+  if(evs.length===0){el.innerHTML='<div class="empty">No tasks this day</div>';return;}
+  const colorMap={'Tenant issue':'amber','Payment due':'red','Contractor meeting':'blue','Inspection':'blue'};
+  el.innerHTML=evs.map(e=>{
+    const cls=colorMap[e.type]||'';
+    const h=e.time?parseInt(e.time.split(':')[0]):9;
+    const ampm=h>=12?'PM':'AM';
+    const h12=h>12?h-12:h===0?12:h;
+    const tStr=e.time?`${h12}:${e.time.split(':')[1]} ${ampm}`:'';
+    return `<div class="task-row">
+      <div class="task-dot ${cls}"></div>
+      <div class="task-info">
+        <div class="task-title-text">${e.type}${e.property?' — '+e.property:''}</div>
+        <div class="task-meta">${e.description||''}${e.assigned_to?' · '+e.assigned_to:''}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <div class="task-time-badge">${tStr}</div>
+        ${ROLE==='owner'?`<button class="btn btn-sm btn-danger" onclick="deleteTask(${e.id})">×</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function openAddTask(){
+  document.getElementById('modal-date-label').textContent=document.getElementById('day-panel-title').textContent;
+  document.getElementById('task-modal').classList.add('open');
+}
+async function saveTask(){
+  const type=document.getElementById('m-type').value;
+  const prop=document.getElementById('m-prop').value;
+  const time=document.getElementById('m-time').value;
+  const assign=document.getElementById('m-assign').value;
+  const desc=document.getElementById('m-desc').value;
+  if(!selectedDate)return toast('No date selected','error');
+  const {error}=await db.from('schedule').insert({date:selectedDate,time,type,property:prop,assigned_to:assign,description:desc,done:false});
+  if(error)return toast('Error: '+error.message,'error');
+  toast('Task added!','success');
+  closeModal('task-modal');
+  document.getElementById('m-prop').value='';
+  document.getElementById('m-desc').value='';
+  document.getElementById('m-assign').value='';
+  await loadMonthEvents();
+  renderDayTasks(selectedDate);
+}
+async function deleteTask(id){
+  await db.from('schedule').delete().eq('id',id);
+  await loadMonthEvents();
+  if(selectedDate)renderDayTasks(selectedDate);
+  toast('Task removed','success');
+}
+async function loadDashTasks(){
+  const today=new Date().toISOString().split('T')[0];
+  const {data}=await db.from('schedule').select('*').eq('date',today).order('time').limit(5);
+  const el=document.getElementById('dash-tasks');
+  if(!data||data.length===0){el.innerHTML='<div class="empty">No tasks today — add some on the calendar!</div>';return;}
+  document.getElementById('dash-count').textContent=data.length;
+  const colorMap={'Tenant issue':'amber','Payment due':'red','Contractor meeting':'blue','Inspection':'blue'};
+  el.innerHTML=data.map(e=>`<div class="task-row">
+    <div class="task-dot ${colorMap[e.type]||''}"></div>
+    <div class="task-info">
+      <div class="task-title-text">${e.type}${e.property?' — '+e.property:''}</div>
+      <div class="task-meta">${e.description||''}</div>
+    </div>
+  </div>`).join('');
+}
+
+// PROPERTY GRIDS
+function badge(s){
+  if(s==='in_progress')return '<span class="badge badge-amber">In progress</span>';
+  if(s==='done')return '<span class="badge badge-green">Complete</span>';
+  return '<span class="badge badge-gray">Not started</span>';
+}
+function buildGrids(){
+  buildGrid(GM,'gm-grid','gm');
+  buildGrid(G44,'g44-grid','g44');
+  buildGrid(RH,'rh-grid','rh');
+}
+function buildGrid(units,gridId,prefix){
+  const g=document.getElementById(gridId);
+  g.innerHTML=units.map((u,i)=>`<div class="prop-card" onclick="showSOW('${prefix}',${i})">
+    <div class="prop-addr">${u.addr}</div>
+    <div class="prop-unit">${u.unit}</div>
+    <div class="prop-status" id="ps-${u.id}"><span class="badge badge-gray">Not started</span></div>
+  </div>`).join('');
+  units.forEach(u=>loadPropStatus(u));
+}
+async function loadPropStatus(u){
+  const {data}=await db.from('sow_items').select('status').eq('unit_id',u.id);
+  if(!data||data.length===0)return;
+  const done=data.filter(d=>d.status==='done').length;
+  const inprog=data.filter(d=>d.status==='in_progress').length;
+  const el=document.getElementById('ps-'+u.id);
+  if(!el)return;
+  if(done===data.length)el.innerHTML='<span class="badge badge-green">Complete</span>';
+  else if(inprog>0||done>0)el.innerHTML='<span class="badge badge-amber">In progress</span>';
+}
+function showList(prefix){
+  document.getElementById(prefix+'-list').style.display='block';
+  document.getElementById(prefix+'-sow').style.display='none';
+}
+async function showSOW(prefix,idx){
+  const units=prefix==='gm'?GM:prefix==='g44'?G44:RH;
+  const u=units[idx];
+  currentSOWUnit=u;
+  document.getElementById(prefix+'-list').style.display='none';
+  document.getElementById(prefix+'-sow').style.display='block';
+  const {data}=await db.from('sow_items').select('*').eq('unit_id',u.id).order('created_at');
+  renderSOW(u,data||[],prefix);
+}
+function renderSOW(u,items,prefix){
+  const canEdit=ROLE==='owner'||ROLE==='employee';
+  const isOwner=ROLE==='owner';
+  // Group by room
+  const rooms={};
+  items.forEach(item=>{
+    const r=item.room||'General';
+    if(!rooms[r])rooms[r]=[];
+    rooms[r].push(item);
+  });
+  const roomsHtml=Object.keys(rooms).map(r=>`
+    <div class="sow-section">
+      <div class="sow-section-title">${r}</div>
+      ${rooms[r].map(item=>`
+        <div class="sow-item" id="sow-item-${item.id}">
+          <div class="sow-check ${item.status==='done'?'done':''}" onclick="toggleSOWItem(${item.id},'${u.id}','${prefix}')"></div>
+          <div class="sow-item-body">
+            <div class="sow-task ${item.status==='done'?'done':''}">${item.task}</div>
+            <div class="sow-detail-text">${item.assigned_to?'👤 '+item.assigned_to:''} ${item.status==='in_progress'?'· <span class="badge badge-amber">In progress</span>':''}</div>
+            ${isOwner&&item.cost?`<div class="cost-only">💰 ${item.cost}</div>`:''}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+            ${canEdit?`<button class="btn btn-sm sow-edit-btn" data-id="${item.id}">Edit</button>`:''}
+            ${canEdit?`<button class="btn btn-sm btn-danger sow-del-btn" data-id="${item.id}" data-uid="${u.id}" data-prefix="${prefix}">×</button>`:''}
+          </div>
+        </div>`).join('')}
+    </div>`).join('');
+
+  document.getElementById(prefix+'-sow-content').innerHTML=`
+    <div class="card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+        <div>
+          <div style="font-size:16px;font-weight:700">${u.addr} · ${u.unit}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">${u.co}${u.flip?' · Flip property':' · Townhouse'}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${canEdit?`<button class="btn btn-primary" id="add-sow-btn">+ Add task</button>`:''}
+          ${canEdit?`<button class="btn" id="walk-btn">🎤 Walkthrough</button>`:''}
+        </div>
+      </div>
+      ${items.length===0?'<div class="empty">No tasks yet — add tasks or start a walkthrough</div>':roomsHtml}
+      ${isOwner&&items.length>0?`<div style="margin-top:12px;padding:10px;background:var(--green-lt);border-radius:var(--r-sm);font-size:12px;color:var(--green-dk)">💰 Total estimated cost: <strong>${calcTotal(items)}</strong></div>`:''}
+    </div>`;
+  // Attach button events after DOM is set
+  setTimeout(()=>{
+    const addBtn=document.getElementById('add-sow-btn');
+    const walkBtn=document.getElementById('walk-btn');
+    const uIdx=prefix==='gm'?GM.findIndex(x=>x.id===u.id):prefix==='g44'?G44.findIndex(x=>x.id===u.id):RH.findIndex(x=>x.id===u.id);
+    if(addBtn)addBtn.onclick=()=>openSOWModal(u.id);
+    if(walkBtn)walkBtn.onclick=()=>startWalkthrough(prefix,uIdx);
+    // Edit/delete buttons
+    document.querySelectorAll('.sow-edit-btn').forEach(btn=>{
+      btn.onclick=async()=>{
+        const id=btn.dataset.id;
+        const {data}=await db.from('sow_items').select('*').eq('id',id).single();
+        if(data)editSOWItem(data);
+      };
+    });
+    document.querySelectorAll('.sow-del-btn').forEach(btn=>{
+      btn.onclick=()=>deleteSOWItem(btn.dataset.id,btn.dataset.uid,btn.dataset.prefix);
+    });
+    // Check toggles
+    document.querySelectorAll('.sow-check').forEach(el=>{
+      const itemDiv=el.closest('.sow-item');
+      if(itemDiv){
+        const id=itemDiv.id.replace('sow-item-','');
+        el.onclick=()=>toggleSOWItem(id,u.id,prefix);
+      }
+    });
+  },100);
+}
+function calcTotal(items){
+  let total=0;
+  items.forEach(i=>{if(i.cost){const n=parseFloat(i.cost.replace(/[^0-9.]/g,''));if(!isNaN(n))total+=n;}});
+  return total>0?'$'+total.toLocaleString():'Not set';
+}
+function openSOWModal(unitId){
+  document.getElementById('sm-unit-id').value=unitId;
+  document.getElementById('sm-item-id').value='';
+  document.getElementById('sm-room').value='';
+  document.getElementById('sm-task').value='';
+  document.getElementById('sm-assign').value='';
+  document.getElementById('sm-cost').value='';
+  document.getElementById('sm-status').value='not_started';
+  document.getElementById('sow-modal').classList.add('open');
+}
+function editSOWItem(item){
+  document.getElementById('sm-unit-id').value=item.unit_id;
+  document.getElementById('sm-item-id').value=item.id;
+  document.getElementById('sm-room').value=item.room||'';
+  document.getElementById('sm-task').value=item.task||'';
+  document.getElementById('sm-assign').value=item.assigned_to||'';
+  document.getElementById('sm-cost').value=item.cost||'';
+  document.getElementById('sm-status').value=item.status||'not_started';
+  document.getElementById('sow-modal').classList.add('open');
+}
+async function saveSOWItem(){
+  const unitId=document.getElementById('sm-unit-id').value;
+  const itemId=document.getElementById('sm-item-id').value;
+  const room=document.getElementById('sm-room').value;
+  const task=document.getElementById('sm-task').value;
+  const assign=document.getElementById('sm-assign').value;
+  const cost=ROLE==='owner'?document.getElementById('sm-cost').value:'';
+  const status=document.getElementById('sm-status').value;
+  if(!task)return toast('Please enter a task description','error');
+  const payload={unit_id:unitId,room,task,assigned_to:assign,cost,status};
+  let error;
+  if(itemId){({error}=await db.from('sow_items').update(payload).eq('id',itemId));}
+  else{({error}=await db.from('sow_items').insert(payload));}
+  if(error)return toast('Error: '+error.message,'error');
+  toast('Task saved!','success');
+  closeModal('sow-modal');
+  // Refresh SOW
+  const prefix=unitId.startsWith('gm')?'gm':unitId.startsWith('g44')?'g44':'rh';
+  const units=prefix==='gm'?GM:prefix==='g44'?G44:RH;
+  const idx=units.findIndex(u=>u.id===unitId);
+  if(idx>=0)showSOW(prefix,idx);
+}
+async function toggleSOWItem(itemId,unitId,prefix){
+  const {data}=await db.from('sow_items').select('status').eq('id',itemId).single();
+  const newStatus=data?.status==='done'?'not_started':'done';
+  await db.from('sow_items').update({status:newStatus}).eq('id',itemId);
+  const units=prefix==='gm'?GM:prefix==='g44'?G44:RH;
+  const idx=units.findIndex(u=>u.id===unitId);
+  if(idx>=0)showSOW(prefix,idx);
+}
+async function deleteSOWItem(itemId,unitId,prefix){
+  await db.from('sow_items').delete().eq('id',itemId);
+  const units=prefix==='gm'?GM:prefix==='g44'?G44:RH;
+  const idx=units.findIndex(u=>u.id===unitId);
+  if(idx>=0)showSOW(prefix,idx);
+  toast('Task removed','success');
+}
+
+// WALKTHROUGH
+function startWalkthrough(prefix,idx){
+  const units=prefix==='gm'?GM:prefix==='g44'?G44:RH;
+  walkUnit={prefix,idx,u:units[idx]};
+  walkRooms=units[idx].flip?['Kitchen','Living Room','Master Bedroom','Bedroom 2','Bathroom 1','Bathroom 2','Basement','Exterior']:ROOMS;
+  walkIdx=0;walkData={};
+  document.getElementById('walk-title').textContent='Walkthrough — '+units[idx].addr+' '+units[idx].unit;
+  renderWalkRooms();
+  document.getElementById('walk-modal').classList.add('open');
+}
+function renderWalkRooms(){
+  const el=document.getElementById('walk-rooms');
+  el.innerHTML=walkRooms.map((r,i)=>`<span style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;background:${i===walkIdx?'var(--green)':'var(--bg)'};color:${i===walkIdx?'#fff':'var(--text2)'};border:1px solid ${i===walkIdx?'var(--green)':'var(--border)'}" onclick="jumpRoom(${i})">${walkData[r]?'✓ ':''} ${r}</span>`).join('');
+  document.getElementById('walk-current-room').textContent='📍 Now in: '+walkRooms[walkIdx];
+  document.getElementById('voice-transcript').textContent=walkData[walkRooms[walkIdx]]?.notes||'Your spoken notes will appear here...';
+  document.getElementById('walk-notes').value=walkData[walkRooms[walkIdx]]?.extra||'';
+  document.getElementById('prev-room-btn').disabled=walkIdx===0;
+  document.getElementById('next-room-btn').textContent=walkIdx===walkRooms.length-1?'Done ✓':'Next room →';
+}
+function jumpRoom(i){saveCurrentRoom();walkIdx=i;renderWalkRooms();}
+function saveCurrentRoom(){
+  const room=walkRooms[walkIdx];
+  const notes=document.getElementById('voice-transcript').textContent;
+  const extra=document.getElementById('walk-notes').value;
+  if(notes&&notes!=='Your spoken notes will appear here...'||extra){
+    walkData[room]={notes,extra};
+  }
+}
+function prevRoom(){saveCurrentRoom();if(walkIdx>0){walkIdx--;renderWalkRooms();}}
+function nextRoom(){
+  saveCurrentRoom();
+  if(walkIdx<walkRooms.length-1){walkIdx++;renderWalkRooms();}
+  else{toast('All rooms recorded! Hit Generate SOW when ready.','success');}
+}
+function toggleVoice(){
+  if(!('webkitSpeechRecognition' in window||'SpeechRecognition' in window)){
+    toast('Voice not supported in this browser — try Chrome','error');return;
+  }
+  if(isRecording){
+    recognition.stop();isRecording=false;
+    document.getElementById('voice-btn').textContent='🎤';
+    document.getElementById('voice-btn').classList.remove('recording');
+    document.getElementById('voice-status').textContent='Tap mic to record notes for this room';
+    return;
+  }
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  recognition=new SR();
+  recognition.continuous=true;recognition.interimResults=true;recognition.lang='en-US';
+  recognition.onresult=e=>{
+    let t='';
+    for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript+' ';
+    document.getElementById('voice-transcript').textContent=t;
+  };
+  recognition.onend=()=>{isRecording=false;document.getElementById('voice-btn').textContent='🎤';document.getElementById('voice-btn').classList.remove('recording');};
+  recognition.start();isRecording=true;
+  document.getElementById('voice-btn').textContent='⏹';
+  document.getElementById('voice-btn').classList.add('recording');
+  document.getElementById('voice-status').textContent='Recording... speak your notes';
+}
+async function generateSOW(){
+  saveCurrentRoom();
+  const hasData=Object.keys(walkData).length>0;
+  if(!hasData)return toast('Please add notes for at least one room first','error');
+  toast('Generating SOW from your notes...','success');
+  // Build prompt
+  const prompt=`You are a real estate property manager assistant. Based on these walkthrough notes for ${walkUnit.u.addr} ${walkUnit.u.unit}, generate a scope of work checklist. For each item return JSON array with objects: {room, task, assigned_to, priority}. assigned_to should be "Mark & Kevin" for general labor, "Hire out" for licensed trades (electrical, plumbing, HVAC). Keep tasks specific and actionable. Walkthrough notes: ${JSON.stringify(walkData)}. Return ONLY a JSON array, no other text.`;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    const d=await res.json();
+    const text=d.content[0].text;
+    const clean=text.replace(/```json|```/g,'').trim();
+    const items=JSON.parse(clean);
+    // Save all items
+    for(const item of items){
+      await db.from('sow_items').insert({unit_id:walkUnit.u.id,room:item.room,task:item.task,assigned_to:item.assigned_to,status:'not_started'});
+    }
+    toast(`SOW generated! ${items.length} tasks created.`,'success');
+    closeModal('walk-modal');
+    showSOW(walkUnit.prefix,walkUnit.idx);
+  }catch(e){
+    toast('Error generating SOW — try adding tasks manually','error');
+    console.error(e);
+  }
+}
+
+// TEAM
+async function loadTeam(){
+  const {data}=await db.from('team').select('*').order('created_at');
+  const el=document.getElementById('team-list');
+  const ce=document.getElementById('dash-team');
+  if(!data||data.length===0){el.innerHTML='<div class="empty">No team members yet</div>';if(ce)ce.textContent='0';return;}
+  if(ce)ce.textContent=data.length;
+  const colors=[['#E6F1FB','#185FA5'],['#E1F5EE','#0F6E56'],['#FAEEDA','#854F0B'],['#FCEBEB','#A32D2D']];
+  el.innerHTML=data.map((m,i)=>{
+    const [bg,col]=colors[i%4];
+    const ini=m.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    return `<div class="team-row">
+      <div class="team-av" style="background:${bg};color:${col}">${ini}</div>
+      <div class="team-info">
+        <div class="team-name">${m.name} <span class="badge ${m.role==='Employee'?'badge-blue':'badge-amber'}">${m.role}</span>${m.trade?` <span class="badge badge-gray">${m.trade}</span>`:''}</div>
+        <div class="team-task">${m.today_tasks||'No tasks assigned'}${m.phone?' · '+m.phone:''}</div>
+      </div>
+      ${ROLE==='owner'?`<button class="btn btn-sm btn-danger" onclick="deleteTeam(${m.id})">Remove</button>`:''}
+    </div>`;
+  }).join('');
+}
+async function addTeam(){
+  const name=document.getElementById('t-name').value;
+  const role=document.getElementById('t-role').value;
+  const trade=document.getElementById('t-trade').value;
+  const phone=document.getElementById('t-phone').value;
+  const tasks=document.getElementById('t-tasks').value;
+  if(!name)return toast('Please enter a name','error');
+  const {error}=await db.from('team').insert({name,role,trade,phone,today_tasks:tasks});
+  if(error)return toast('Error: '+error.message,'error');
+  toast('Team member added!','success');
+  document.getElementById('t-name').value='';
+  document.getElementById('t-tasks').value='';
+  loadTeam();
+}
+async function deleteTeam(id){
+  await db.from('team').delete().eq('id',id);
+  loadTeam();
+  toast('Removed','success');
+}
+
+// UTILS
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function copyUrl(){navigator.clipboard.writeText(window.location.href).then(()=>toast('Link copied!','success'));}
+function toast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast show '+(type||'');
+  setTimeout(()=>t.className='toast',3000);
+}
+</script>
+</body>
+</html>
